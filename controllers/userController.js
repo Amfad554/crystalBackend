@@ -2,7 +2,6 @@ const { PrismaClient } = require("@prisma/client");
 const prisma = new PrismaClient();
 const bcrypt = require('bcrypt');
 const jwt = require("jsonwebtoken");
-const uploadToCloudinary = require('../utils/uploadToCloudinary');
 const { sendVerification } = require("../utils/emailVerification");
 const generateToken = require("../utils/generateToken");
 
@@ -22,17 +21,17 @@ exports.registerUser = async (req, res) => {
     }
 
     const hashedPassword = await bcrypt.hash(password, 12);
-    let imageUrl = null;
-    if (req.file) {
-      imageUrl = await uploadToCloudinary(req.file.buffer, "image", "Users");
-    }
+    // let imageUrl = null;
+    // if (req.file) {
+    //   imageUrl = await uploadToCloudinary(req.file.buffer, "image", "Users");
+    // }
 
     const newUser = await prisma.user.create({
-      data: { name, email, password: hashedPassword, image: imageUrl, role: "CLIENT", isVerified: false }
+      data: { name, email, password: hashedPassword, role: "CLIENT", isVerified: false }
     });
 
     const token = jwt.sign({ email }, process.env.JWT_SECRET_KEY, { expiresIn: '15m' });
-    const verificationLink = `http://localhost:5173/verifyemail/${token}`;
+   const verificationLink = `https://crystal-ices.vercel.app/verifyemail/${token}`
     await sendVerification(newUser.email, verificationLink);
 
     return res.status(201).json({
@@ -55,7 +54,7 @@ exports.loginUser = async (req, res) => {
     }
     if (!user.isVerified) {
       const token = jwt.sign({ email }, process.env.JWT_SECRET_KEY, { expiresIn: '15m' });
-      const link = `http://localhost:5173/verifyemail/${token}`;
+      const link =`https://crystal-ices.vercel.app/verifyemail/${token}`;
       await sendVerification(user.email, link);
       return res.status(403).json({ success: false, message: "Account not verified. New link sent." });
     }
