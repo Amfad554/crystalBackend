@@ -31,7 +31,7 @@ exports.registerUser = async (req, res) => {
     });
 
     const token = jwt.sign({ email }, process.env.JWT_SECRET_KEY, { expiresIn: '15m' });
-   const verificationLink = `https://crystal-ices.vercel.app/verifyemail/${token}`
+    const verificationLink = `https://crystal-ices.vercel.app/verifyemail/${token}`
     await sendVerification(newUser.email, verificationLink);
 
     return res.status(201).json({
@@ -40,7 +40,12 @@ exports.registerUser = async (req, res) => {
       data: { id: newUser.id, name: newUser.name }
     });
   } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
+    // This helps you see the REAL error in the browser console
+    res.status(500).json({
+      success: false,
+      message: error.message,
+      stack: error.stack
+    });
   }
 };
 
@@ -54,7 +59,7 @@ exports.loginUser = async (req, res) => {
     }
     if (!user.isVerified) {
       const token = jwt.sign({ email }, process.env.JWT_SECRET_KEY, { expiresIn: '15m' });
-      const link =`https://crystal-ices.vercel.app/verifyemail/${token}`;
+      const link = `https://crystal-ices.vercel.app/verifyemail/${token}`;
       await sendVerification(user.email, link);
       return res.status(403).json({ success: false, message: "Account not verified. New link sent." });
     }
@@ -101,7 +106,7 @@ exports.getAllUsers = async (req, res) => {
 // --- DELETE USER ---
 exports.deleteUser = async (req, res) => {
   try {
-    await prisma.user.delete({ 
+    await prisma.user.delete({
       where: { id: req.params.id } // No parseInt needed
     });
     res.json({ success: true, message: "User deleted" });
@@ -120,7 +125,7 @@ exports.updateRole = async (req, res) => {
       where: { id: id },
       data: { role: role },
     });
-    
+
     console.log("2. DB Update Finished!"); // If you don't see this, Prisma is hanging.
 
     return res.status(200).json({ success: true, user: updatedUser });
@@ -143,7 +148,7 @@ exports.updateProfile = async (req, res) => {
     }
 
     const updatedUser = await prisma.user.update({
-      where: { 
+      where: {
         id: id // <--- REMOVED parseInt() here too
       },
       data: updateData,
