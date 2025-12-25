@@ -10,10 +10,15 @@ exports.registerUser = async (req, res) => {
   const { name, email, password, confirmpassword } = req.body;
   try {
     if (!name || !email || !password || !confirmpassword) {
+       console.log(message);
       return res.status(400).json({ success: false, message: "Missing required fields!" });
+     
+      
     }
     if (password !== confirmpassword) {
+       console.log(mess);
       return res.status(400).json({ success: false, message: "Passwords do not match!" });
+         
     }
     const existingUser = await prisma.user.findUnique({ where: { email } });
     if (existingUser) {
