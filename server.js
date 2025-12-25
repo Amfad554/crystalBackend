@@ -8,7 +8,10 @@ const app = express();
 
 // --- MIDDLEWARES ---
 app.use(cors({
-    origin: ["https://crystal-ices.vercel.app/", "https://your-frontend-name.onrender.com"], 
+    origin: [
+        "http://localhost:5173",          // For your local testing
+        "https://crystal-ices.vercel.app" // Your ACTUAL frontend (no trailing slash)
+    ], 
     methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
     allowedHeaders: ["Content-Type", "Authorization"],
     credentials: true
