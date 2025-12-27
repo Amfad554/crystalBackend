@@ -4,9 +4,13 @@ const transporter = require('../config/email');
 dotenv.config();
 
 const sendVerification = async (email, verificationLink) => {
+  // LOGIC CHECK: Ensure the link is using the production domain in production
+  // Typically verificationLink is passed from the controller like:
+  // `${process.env.FRONTEND_URL}/verify-email/${token}`
+
   const mailOption = {
     from: {
-      name: "Crystal Ices Portal", // Updated Branding
+      name: "Crystal Ices Portal",
       address: process.env.EMAIL_HOST_USER,
     },
     to: email,
@@ -44,9 +48,10 @@ const sendVerification = async (email, verificationLink) => {
 
   try {
     await transporter.sendMail(mailOption);
-    console.log(`Verification email successfully sent to ${email}`);
+    console.log(`✅ Verification email successfully sent to ${email}`);
   } catch (error) {
-    console.error("Nodemailer Error:", error.message);
+    // Better error logging for debugging Render deployment
+    console.error("❌ Nodemailer Error:", error.message);
     throw new Error("Unable to send verification email");
   }
 };

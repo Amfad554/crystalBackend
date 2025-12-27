@@ -1,17 +1,20 @@
 require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
-// Import your routers here
-const userRouter = require('./routers/userRouter'); 
+
+const userRouter = require('./routers/userRouter');
+const inquiryRouter = require('./routers/InquiryRouter');
+const adminRouter = require('./routers/adminRouter');
 
 const app = express();
 
 // --- MIDDLEWARES ---
 app.use(cors({
     origin: [
-        "http://localhost:5173",          // For your local testing
-        "https://crystal-ices.vercel.app" // Your ACTUAL frontend (no trailing slash)
-    ], 
+        "http://localhost:5173",
+        "https://crystal-ices.vercel.app",
+        /\.onrender\.com$/ // This allows ANY of your subdomains on Render
+    ],
     methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
     allowedHeaders: ["Content-Type", "Authorization"],
     credentials: true
@@ -20,17 +23,16 @@ app.use(cors({
 app.use(express.json());
 
 // --- ROUTES ---
-
-// Health Check Route
 app.get('/', (req, res) => {
-    res.status(200).send("🚀 Server is booming and healthy!");
+    res.status(200).send("🚀 Crystal Backend is Live on Render!");
 });
 
-// User Routes
 app.use('/api/users', userRouter);
+app.use('/api/inquiry', inquiryRouter);
+app.use('/api/admin', adminRouter);
+app.use('/api/equipment', adminRouter); // For the Catalogue
 
 // --- GLOBAL ERROR HANDLER ---
-// This prevents the "clean exit" if a specific route fails
 app.use((err, req, res, next) => {
     console.error("❌ GLOBAL ERROR:", err.stack);
     res.status(500).json({
@@ -39,8 +41,8 @@ app.use((err, req, res, next) => {
     });
 });
 
+// Render dynamic port binding
 const PORT = process.env.PORT || 5000;
-app.listen(PORT, () => {
+app.listen(PORT, "0.0.0.0", () => {
     console.log(`🚀 Server is booming on port ${PORT}`);
-    console.log(`🔗 Local link: http://localhost:${PORT}`);
 });

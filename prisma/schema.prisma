@@ -13,13 +13,18 @@ model User {
   email      String    @unique
   password   String
   role       Role      @default(CLIENT)
+  
+  // --- ADD THESE TWO LINES ---
+  bio        String?
+  phone      String?
+  // ---------------------------
+
   image      String?
   createdAt  DateTime  @default(now())
   updatedAt  DateTime  @updatedAt
   isVerified Boolean   @default(false)
   inquiries  Inquiry[]
 }
-
 model Equipment {
   id             String   @id @default(cuid())
   name           String
@@ -64,6 +69,21 @@ model Staff {
   specialty String
   imageUrl  String?
   createdAt DateTime @default(now())
+}
+
+model Newsletter {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  createdAt DateTime @default(now())
+}
+
+model Application {
+  id             String   @id @default(uuid())
+  applicantName  String
+  applicantEmail String
+  cvLink         String
+  roleApplied    String
+  createdAt      DateTime @default(now())
 }
 
 enum Role {
