@@ -12,7 +12,7 @@ const app = express();
 app.use(cors({
     origin: [
         "http://localhost:5173",
-        "https://crystalices.site/",
+        "https://crystalices.site",
         /\.onrender\.com$/ // This allows ANY of your subdomains on Render
     ],
     methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
