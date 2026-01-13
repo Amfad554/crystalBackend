@@ -1,7 +1,10 @@
 const express = require('express');
 const router = express.Router();
 const { PrismaClient } = require("@prisma/client");
+const { Resend } = require('resend'); // 1. Added Resend import
+
 const prisma = new PrismaClient();
+const resend = new Resend(process.env.RESEND_API_KEY); // 2. Initialized Resend with your Key
 
 // 1. SUBMIT NEW INQUIRY
 router.post('/submit', async (req, res) => {
@@ -22,6 +25,20 @@ router.post('/submit', async (req, res) => {
                 userId: userId || null
             }
         });
+
+        // 3. Send the notification email
+        await resend.emails.send({
+            from: 'Crystal Ices <onboarding@crystalices.site>',
+            to: ['your-email@gmail.com'], // Put your personal email here
+            subject: `New Inquiry: ${service}`,
+            html: `
+                <h3>New Message from ${fullName}</h3>
+                <p><strong>Email:</strong> ${email}</p>
+                <p><strong>Service:</strong> ${service}</p>
+                <p><strong>Requirements:</strong> ${requirements}</p>
+            `
+        });
+
         res.status(201).json({ success: true, data: inquiry });
     } catch (error) {
         res.status(500).json({ success: false, message: error.message });

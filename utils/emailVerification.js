@@ -1,58 +1,49 @@
 // utils/emailVerification.js
+const { Resend } = require('resend');
 const dotenv = require('dotenv');
-const transporter = require('../config/email');
 dotenv.config();
 
+// Initialize Resend
+const resend = new Resend(process.env.RESEND_API_KEY);
+
 const sendVerification = async (email, verificationLink) => {
-  // LOGIC CHECK: Ensure the link is using the production domain in production
-  // Typically verificationLink is passed from the controller like:
-  // `${process.env.FRONTEND_URL}/verify-email/${token}`
-
-  const mailOption = {
-    from: {
-      name: "Crystal Ices Portal",
-      address: process.env.EMAIL_HOST_USER,
-    },
-    to: email,
-    subject: "Verify Your Account - Crystal Ices",
-    html: `
-      <div style="width: 100%; max-width: 600px; margin: auto; text-align: center; font-family: 'Segoe UI', Arial, sans-serif; border: 1px solid #e2e8f0; border-radius: 20px; overflow: hidden; background-color: #ffffff;">
-        <div style="background-color: #0B2A4A; padding: 40px 20px;">
-          <div style="display: inline-block; background-color: #3b82f6; color: white; padding: 10px 20px; border-radius: 10px; font-weight: bold; font-size: 24px;">CI</div>
-          <h1 style="color: #ffffff; margin-top: 20px; font-size: 22px; text-transform: uppercase; letter-spacing: 2px;">Industrial Portal</h1>
-        </div>
-
-        <div style="padding: 40px 30px; color: #1e293b;">
-          <h2 style="font-size: 20px; font-weight: 800; margin-bottom: 10px;">Confirm your email address</h2>
-          <p style="font-size: 15px; line-height: 1.6; color: #64748b;">
-            Thank you for registering with Crystal Ices. To complete your account setup and access the equipment fleet, please verify your email.
-          </p>
-          
-          <div style="margin: 35px 0;">
-            <a href="${verificationLink}" style="display: inline-block; padding: 16px 36px; background-color: #0B2A4A; color: #ffffff; text-decoration: none; font-weight: bold; border-radius: 12px; font-size: 14px; text-transform: uppercase; letter-spacing: 1px; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
-              Verify My Account
-            </a>
-          </div>
-
-          <p style="font-size: 12px; color: #94a3b8; margin-top: 30px;">
-            This link is valid for 15 minutes. If you did not create an account, you can safely ignore this email.
-          </p>
-        </div>
-
-        <div style="background-color: #f8fafc; padding: 20px; border-top: 1px solid #e2e8f0;">
-          <p style="font-size: 10px; color: #94a3b8; margin: 0;">&copy; ${new Date().getFullYear()} Crystal Ices Energies Nigeria Limited.</p>
-        </div>
-      </div>
-    `,
-  };
-
   try {
-    await transporter.sendMail(mailOption);
-    console.log(`✅ Verification email successfully sent to ${email}`);
-  } catch (error) {
-    // Better error logging for debugging Render deployment
-    console.error("❌ Nodemailer Error:", error.message);
-    throw new Error("Unable to send verification email");
+    const { data, error } = await resend.emails.send({
+      // Ensure this email uses your verified domain
+      from: 'Crystal Ices <onboarding@crystalices.site>',
+      to: [email],
+      subject: "Verify Your Account - Crystal Ices",
+      html: `
+        <div style="width: 100%; max-width: 600px; margin: auto; font-family: sans-serif; border: 1px solid #e2e8f0; border-radius: 20px; overflow: hidden;">
+          <div style="background-color: #0B2A4A; padding: 40px; text-align: center;">
+            <h1 style="color: #ffffff; margin: 0;">Crystal Ices</h1>
+          </div>
+          <div style="padding: 40px; color: #1e293b; text-align: center;">
+            <h2 style="margin-bottom: 20px;">Confirm your email address</h2>
+            <p style="color: #64748b; line-height: 1.6;">
+              Thank you for registering. Please click the button below to verify your account.
+            </p>
+            <div style="margin: 30px 0;">
+              <a href="${verificationLink}" style="background-color: #0B2A4A; color: #ffffff; padding: 15px 30px; text-decoration: none; border-radius: 10px; font-weight: bold; display: inline-block;">
+                Verify My Account
+              </a>
+            </div>
+            <p style="font-size: 12px; color: #94a3b8;">This link expires in 15 minutes.</p>
+          </div>
+        </div>
+      `,
+    });
+
+    if (error) {
+      console.error("❌ Resend API Error:", error);
+      throw new Error(error.message);
+    }
+
+    console.log("✅ Email sent successfully:", data.id);
+    return data;
+  } catch (err) {
+    console.error("❌ Resend catch block:", err.message);
+    throw err; // Re-throw so the controller knows it failed
   }
 };
 

@@ -8,7 +8,9 @@ const generateToken = require("../utils/generateToken");
 // --- REGISTRATION ---
 exports.registerUser = async (req, res) => {
     const { name, email, password, confirmpassword } = req.body;
+
     try {
+        // 1. Basic Validation
         if (!name || !email || !password || !confirmpassword) {
             return res.status(400).json({ success: false, message: "Missing required fields!" });
         }
@@ -16,13 +18,14 @@ exports.registerUser = async (req, res) => {
             return res.status(400).json({ success: false, message: "Passwords do not match!" });
         }
 
+        // 2. Check if user exists
         const existingUser = await prisma.user.findUnique({ where: { email } });
         if (existingUser) {
             return res.status(400).json({ success: false, message: "Email already exists!" });
         }
 
+        // 3. Hash Password and Create User
         const hashedPassword = await bcrypt.hash(password, 12);
-
         const newUser = await prisma.user.create({
             data: {
                 name,
@@ -33,21 +36,27 @@ exports.registerUser = async (req, res) => {
             }
         });
 
+        // 4. Generate Token and Send Email
+        const token = jwt.sign({ email: newUser.email }, process.env.JWT_SECRET_KEY, { expiresIn: '15m' });
+        const verificationLink = `${process.env.FRONTEND_URL}/verifyemail/${token}`;
+
         try {
-            const token = jwt.sign({ email }, process.env.JWT_SECRET_KEY, { expiresIn: '15m' });
-            const verificationLink = `${process.env.FRONTEND_URL}/verifyemail/${token}`;
             await sendVerification(newUser.email, verificationLink);
+            console.log(`✅ Verification email queued for ${newUser.email}`);
         } catch (mailError) {
-            console.error("Registration Email Error:", mailError.message);
+            // We still return 201 because the user WAS created, 
+            // but we alert the console that the email failed.
+            console.error("❌ Mailer failed:", mailError.message);
         }
 
         return res.status(201).json({
             success: true,
-            message: "Registration successful! Please verify your email.",
+            message: "Registration successful! Please check your email for verification.",
             data: { id: newUser.id, name: newUser.name }
         });
 
     } catch (error) {
+        console.error("🔥 Registration Error:", error);
         res.status(500).json({ success: false, message: "Internal Server Error" });
     }
 };
@@ -58,14 +67,36 @@ exports.loginUser = async (req, res) => {
     try {
         const user = await prisma.user.findUnique({ where: { email } });
 
+        // 1. Check Credentials
         if (!user || !(await bcrypt.compare(password, user.password))) {
             return res.status(400).json({ success: false, message: "Invalid email or password" });
         }
 
+        // 2. Handle Unverified Account
         if (!user.isVerified) {
-            return res.status(403).json({ success: false, message: "Account not verified." });
+            try {
+                // Generate a new temporary token
+                const jwt = require("jsonwebtoken");
+                const { sendVerification } = require("../utils/emailVerification");
+
+                const token = jwt.sign({ email: user.email }, process.env.JWT_SECRET_KEY, { expiresIn: '15m' });
+                const verificationLink = `${process.env.FRONTEND_URL}/verifyemail/${token}`;
+
+                await sendVerification(user.email, verificationLink);
+
+                return res.status(403).json({
+                    success: false,
+                    message: "Account not verified. A new verification link has been sent to your email."
+                });
+            } catch (mailError) {
+                return res.status(403).json({
+                    success: false,
+                    message: "Account not verified. Please contact support."
+                });
+            }
         }
 
+        // 3. Successful Login
         const token = generateToken(user);
         res.status(200).json({
             success: true,
@@ -80,10 +111,10 @@ exports.loginUser = async (req, res) => {
             }
         });
     } catch (error) {
+        console.error("Login Error:", error);
         res.status(500).json({ success: false, message: "Server error during login" });
     }
 };
-
 // --- UPDATE PROFILE ---
 exports.updateProfile = async (req, res) => {
     const { id } = req.params;
@@ -188,16 +219,16 @@ exports.getAllSubscribers = async (req, res) => {
                 createdAt: 'desc' // Shows newest subscribers first
             }
         });
-        
-        res.status(200).json({ 
-            success: true, 
-            data: subscribers 
+
+        res.status(200).json({
+            success: true,
+            data: subscribers
         });
     } catch (error) {
         console.error("Fetch Subscribers Error:", error.message);
-        res.status(500).json({ 
-            success: false, 
-            message: "Failed to fetch subscribers list" 
+        res.status(500).json({
+            success: false,
+            message: "Failed to fetch subscribers list"
         });
     }
 };
@@ -205,7 +236,7 @@ exports.getAllSubscribers = async (req, res) => {
 // --- NEWSLETTER SUBSCRIPTION (EXISTING) ---
 exports.subscribeNewsletter = async (req, res) => {
     const { email } = req.body;
-    
+
     try {
         if (!email) {
             return res.status(400).json({ success: false, message: "Email is required." });
@@ -223,10 +254,10 @@ exports.subscribeNewsletter = async (req, res) => {
             data: { email }
         });
 
-        res.status(200).json({ 
-            success: true, 
+        res.status(200).json({
+            success: true,
             message: "Successfully joined the newsletter!",
-            data: subscription 
+            data: subscription
         });
     } catch (error) {
         console.error("Newsletter Error:", error.message);
