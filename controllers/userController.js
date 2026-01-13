@@ -162,16 +162,50 @@ exports.updateProfile = async (req, res) => {
 
 // --- VERIFY EMAIL ---
 exports.verifyEmail = async (req, res) => {
-    const token = req.body.token || req.params.token;
+    // 1. Get token from body (POST) or params (GET)
+    const token = req.body.token || req.params.token || req.query.token;
+
+    if (!token) {
+        return res.status(400).json({ success: false, message: "No token provided." });
+    }
+
     try {
+        // 2. Verify Token
         const decoded = jwt.verify(token, process.env.JWT_SECRET_KEY);
+
+        // 3. Check if user exists and update
+        const user = await prisma.user.findUnique({
+            where: { email: decoded.email }
+        });
+
+        if (!user) {
+            return res.status(404).json({ success: false, message: "User not found." });
+        }
+
+        if (user.isVerified) {
+            return res.status(200).json({ success: true, message: "Email already verified. You can log in." });
+        }
+
         await prisma.user.update({
             where: { email: decoded.email },
             data: { isVerified: true }
         });
-        return res.status(200).json({ success: true, message: "Verified!" });
+
+        console.log(`✅ User ${decoded.email} is now verified.`);
+        
+        return res.status(200).json({ 
+            success: true, 
+            message: "Email verified successfully! You can now log in." 
+        });
+
     } catch (error) {
-        return res.status(400).json({ success: false, message: "Invalid token" });
+        console.error("❌ Verification Error:", error.message);
+        
+        if (error.name === 'TokenExpiredError') {
+            return res.status(400).json({ success: false, message: "Verification link has expired." });
+        }
+        
+        return res.status(400).json({ success: false, message: "Invalid or corrupt token." });
     }
 };
 
