@@ -5,6 +5,7 @@ const cors = require('cors');
 const userRouter = require('./routers/userRouter');
 const inquiryRouter = require('./routers/InquiryRouter');
 const adminRouter = require('./routers/adminRouter');
+const aiRouter = require('./routers/adminRouter');
 
 const app = express();
 
@@ -31,7 +32,7 @@ app.use('/api/users', userRouter);
 app.use('/api/inquiry', inquiryRouter);
 app.use('/api/admin', adminRouter);
 app.use('/api/equipment', adminRouter); // For the Catalogue
-
+app.use('/api/equipment', aiRouter); // For the Catalogue
 // --- GLOBAL ERROR HANDLER ---
 app.use((err, req, res, next) => {
     console.error("❌ GLOBAL ERROR:", err.stack);

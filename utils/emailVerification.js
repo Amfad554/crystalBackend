@@ -6,17 +6,17 @@ const apiKey = process.env.RESEND_API_KEY;
 const resend = apiKey ? new Resend(apiKey) : null;
 
 const sendVerification = async (email, verificationLink) => {
-  if (!resend) {
-    console.error("❌ Resend API Key is missing.");
-    throw new Error("Email service not configured.");
-  }
+    if (!resend) {
+        console.error("❌ Resend API Key is missing.");
+        throw new Error("Email service not configured.");
+    }
 
-  try {
-    const { data, error } = await resend.emails.send({
-      from: 'Crystal Ices <onboarding@crystalices.site>',
-      to: [email],
-      subject: "Verify Your Industrial Portal Account",
-      html: `
+    try {
+        const { data, error } = await resend.emails.send({
+            from: 'Crystal Ices <onboarding@crystalices.site>',
+            to: [email],
+            subject: "Verify Your Industrial Portal Account",
+            html: `
             <!DOCTYPE html>
             <html>
             <head>
@@ -90,18 +90,18 @@ const sendVerification = async (email, verificationLink) => {
             </body>
             </html>
             `,
-    });
+        });
 
-    if (error) {
-      console.error("❌ Resend API Error:", error);
-      throw error;
+        if (error) {
+            console.error("❌ Resend API Error:", error);
+            throw error;
+        }
+
+        return data;
+    } catch (err) {
+        console.error("❌ Mail Dispatch Error:", err.message);
+        throw err;
     }
-
-    return data;
-  } catch (err) {
-    console.error("❌ Mail Dispatch Error:", err.message);
-    throw err;
-  }
 };
 
 module.exports = { sendVerification };
