@@ -31,15 +31,53 @@ exports.getAllStaff = async (req, res) => {
     res.status(500).json({ success: false, message: "Error fetching staff" });
   }
 };
-
 exports.addStaff = async (req, res) => {
   try {
-    const newStaff = await prisma.staff.create({ data: req.body });
+    // 1. Pull text fields from req.body
+    const { name, role, specialty } = req.body;
+    
+    // 2. Pull the Cloudinary URL from req.file
+    const imageUrl = req.file ? req.file.path : null;
+
+    const newStaff = await prisma.staff.create({
+      data: {
+        name,
+        role,
+        specialty,
+        imageUrl: imageUrl, // Saving the link as a string
+      },
+    });
+
     res.status(201).json({ success: true, data: newStaff });
   } catch (error) {
+    console.error("Staff Add Error:", error);
     res.status(500).json({ success: false, message: "Error adding staff" });
   }
 };
+exports.updateStaff = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { name, role, specialty } = req.body;
+    
+    // Create update object
+    const updateData = { name, role, specialty };
+    
+    // If a new image was uploaded via Cloudinary, update the URL
+    if (req.file) {
+      updateData.imageUrl = req.file.path;
+    }
+
+    const updated = await prisma.staff.update({
+      where: { id },
+      data: updateData,
+    });
+
+    res.json({ success: true, data: updated });
+  } catch (error) {
+    res.status(500).json({ success: false, message: "Update failed" });
+  }
+};
+
 
 exports.deleteStaff = async (req, res) => {
   try {
@@ -60,12 +98,29 @@ exports.getAllEquipment = async (req, res) => {
   }
 };
 
+// --- EQUIPMENT ---
 exports.addEquipment = async (req, res) => {
   try {
-    const data = { ...req.body, dailyRate: parseFloat(req.body.dailyRate) };
-    const newEquip = await prisma.equipment.create({ data });
+    const { name, category, brand, region, description, dailyRate } = req.body;
+    
+    // Pull the Cloudinary URL from req.file
+    const imageUrl = req.file ? req.file.path : null;
+
+    const newEquip = await prisma.equipment.create({
+      data: {
+        name,
+        category,
+        brand,
+        region,
+        description,
+        imageUrl: imageUrl,
+        dailyRate: dailyRate ? parseFloat(dailyRate) : null,
+      },
+    });
+
     res.status(201).json({ success: true, data: newEquip });
   } catch (error) {
+    console.error("Equipment Add Error:", error);
     res.status(500).json({ success: false, message: "Error adding equipment" });
   }
 };
