@@ -1,7 +1,7 @@
 const express = require("express");
 const router = express.Router();
 const adminController = require("../controllers/adminController");
-const upload = require("../middleware/uploadMiddleware"); // Path to your Cloudinary config
+const upload = require("../utils/uploadToCloudinary");
 
 const { 
   getDashboardStats, 
