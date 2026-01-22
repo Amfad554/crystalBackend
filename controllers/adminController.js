@@ -33,25 +33,26 @@ exports.getAllStaff = async (req, res) => {
 };
 exports.addStaff = async (req, res) => {
   try {
-    // 1. Pull text fields from req.body
     const { name, role, specialty } = req.body;
     
-    // 2. Pull the Cloudinary URL from req.file
-    const imageUrl = req.file ? req.file.path : null;
+    let imageUrl = null;
+    if (req.file) {
+      imageUrl = await uploadToCloudinary(req.file.buffer, "image", "staff_profiles");
+    }
 
     const newStaff = await prisma.staff.create({
       data: {
         name,
         role,
         specialty,
-        imageUrl: imageUrl, // Saving the link as a string
+        imageUrl: imageUrl,
       },
     });
 
     res.status(201).json({ success: true, data: newStaff });
   } catch (error) {
-    console.error("Staff Add Error:", error);
-    res.status(500).json({ success: false, message: "Error adding staff" });
+    console.error("🔥 Staff Add Error:", error);
+    res.status(500).json({ success: false, message: "Error adding staff member" });
   }
 };
 exports.updateStaff = async (req, res) => {
@@ -99,47 +100,39 @@ exports.getAllEquipment = async (req, res) => {
 };
 
 // --- EQUIPMENT ---
+const uploadToCloudinary = require("../utils/uploadToCloudinary");
+
 exports.addEquipment = async (req, res) => {
   try {
     const { name, category, brand, region, description, dailyRate } = req.body;
     
-    // 1. Handle the Image URL from Multer/Cloudinary
-    const imageUrl = req.file ? req.file.path : null;
+    // 1. Upload Buffer to Cloudinary using your utility
+    let imageUrl = null;
+    if (req.file) {
+      // Arguments: (fileBuffer, resourceType, folder_name)
+      imageUrl = await uploadToCloudinary(req.file.buffer, "image", "equipment_assets");
+    }
 
-    // 2. Data Cleaning & Parsing
-    // dailyRate comes as a string from FormData; Prisma needs a Float/Number
+    // 2. Data Cleaning
     const parsedRate = dailyRate && dailyRate !== "" ? parseFloat(dailyRate) : null;
 
     // 3. Database Creation
     const newEquip = await prisma.equipment.create({
       data: {
         name: name || "Unnamed Equipment",
-        category: category || "General",
-        brand: brand || "N/A",
-        region: region || "Lagos",
-        description: description || "",
-        imageUrl: imageUrl,
-        dailyRate: parsedRate, // Now safely a Number or null
+        category,
+        brand,
+        region,
+        description,
+        imageUrl: imageUrl, // The secure_url returned from your utility
+        dailyRate: parsedRate,
       },
     });
 
-    res.status(201).json({ 
-      success: true, 
-      message: "Equipment added successfully", 
-      data: newEquip 
-    });
+    res.status(201).json({ success: true, data: newEquip });
   } catch (error) {
     console.error("🔥 Equipment Add Error:", error);
-    
-    // Check for specific Prisma errors (e.g., missing required fields)
-    if (error.code === 'P2002') {
-      return res.status(400).json({ success: false, message: "Equipment already exists." });
-    }
-
-    res.status(500).json({ 
-      success: false, 
-      message: "Failed to add equipment. Check server logs." 
-    });
+    res.status(500).json({ success: false, message: "Failed to add equipment." });
   }
 };
 
