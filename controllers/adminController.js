@@ -103,25 +103,43 @@ exports.addEquipment = async (req, res) => {
   try {
     const { name, category, brand, region, description, dailyRate } = req.body;
     
-    // Pull the Cloudinary URL from req.file
+    // 1. Handle the Image URL from Multer/Cloudinary
     const imageUrl = req.file ? req.file.path : null;
 
+    // 2. Data Cleaning & Parsing
+    // dailyRate comes as a string from FormData; Prisma needs a Float/Number
+    const parsedRate = dailyRate && dailyRate !== "" ? parseFloat(dailyRate) : null;
+
+    // 3. Database Creation
     const newEquip = await prisma.equipment.create({
       data: {
-        name,
-        category,
-        brand,
-        region,
-        description,
+        name: name || "Unnamed Equipment",
+        category: category || "General",
+        brand: brand || "N/A",
+        region: region || "Lagos",
+        description: description || "",
         imageUrl: imageUrl,
-        dailyRate: dailyRate ? parseFloat(dailyRate) : null,
+        dailyRate: parsedRate, // Now safely a Number or null
       },
     });
 
-    res.status(201).json({ success: true, data: newEquip });
+    res.status(201).json({ 
+      success: true, 
+      message: "Equipment added successfully", 
+      data: newEquip 
+    });
   } catch (error) {
-    console.error("Equipment Add Error:", error);
-    res.status(500).json({ success: false, message: "Error adding equipment" });
+    console.error("🔥 Equipment Add Error:", error);
+    
+    // Check for specific Prisma errors (e.g., missing required fields)
+    if (error.code === 'P2002') {
+      return res.status(400).json({ success: false, message: "Equipment already exists." });
+    }
+
+    res.status(500).json({ 
+      success: false, 
+      message: "Failed to add equipment. Check server logs." 
+    });
   }
 };
 
