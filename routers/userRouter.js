@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const userController = require('../controllers/userController');
-const { isUser } = require('../middleware/authMiddleware'); // Use your existing middleware
+const { isUser } = require('../middleware/auth'); // Use your existing middleware
 const upload = require('../middleware/multer'); // Use your existing multer
 
 // Public routes
