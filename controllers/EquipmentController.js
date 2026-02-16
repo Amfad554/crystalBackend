@@ -6,7 +6,14 @@ exports.getAllEquipment = async (req, res) => {
     const equipment = await prisma.equipment.findMany({
       orderBy: { createdAt: 'desc' }
     });
-    res.status(200).json({ success: true, data: equipment });
+    
+    // Transform imageUrl to full URL
+    const equipmentWithFullUrls = equipment.map(item => ({
+      ...item,
+      imageUrl: item.imageUrl ? `${process.env.BACKEND_URL || 'https://crystalbackend.onrender.com'}${item.imageUrl}` : null
+    }));
+    
+    res.status(200).json({ success: true, data: equipmentWithFullUrls });
   } catch (error) {
     console.error("Get Equipment Error:", error);
     res.status(500).json({ success: false, message: "Error fetching equipment" });
@@ -17,7 +24,6 @@ exports.addEquipment = async (req, res) => {
   try {
     const { name, category, brand, region, dailyRate, description } = req.body;
     
-    // Basic validation
     if (!name || !category) {
       return res.status(400).json({ 
         success: false, 
@@ -25,7 +31,7 @@ exports.addEquipment = async (req, res) => {
       });
     }
 
-    // Handle image upload if multer is configured
+    // Handle image upload
     const imageUrl = req.file ? `/uploads/${req.file.filename}` : null;
 
     const newItem = await prisma.equipment.create({
@@ -41,7 +47,13 @@ exports.addEquipment = async (req, res) => {
       }
     });
     
-    res.status(201).json({ success: true, data: newItem });
+    // Return with full URL
+    const response = {
+      ...newItem,
+      imageUrl: newItem.imageUrl ? `${process.env.BACKEND_URL || 'https://crystalbackend.onrender.com'}${newItem.imageUrl}` : null
+    };
+    
+    res.status(201).json({ success: true, data: response });
   } catch (error) {
     console.error("Add Equipment Error:", error);
     res.status(500).json({ 
@@ -78,7 +90,13 @@ exports.updateEquipment = async (req, res) => {
       data: updateData
     });
 
-    res.status(200).json({ success: true, data: updated });
+    // Return with full URL
+    const response = {
+      ...updated,
+      imageUrl: updated.imageUrl ? `${process.env.BACKEND_URL || 'https://crystalbackend.onrender.com'}${updated.imageUrl}` : null
+    };
+
+    res.status(200).json({ success: true, data: response });
   } catch (error) {
     console.error("Update Equipment Error:", error);
     res.status(500).json({ 

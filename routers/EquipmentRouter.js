@@ -7,6 +7,7 @@ const {
   updateEquipment, 
   deleteEquipment 
 } = require('../controllers/EquipmentController');
+const { verifyToken } = require('../middleware/authMiddleware');
 
 const router = express.Router();
 
@@ -36,10 +37,12 @@ const upload = multer({
   }
 });
 
-// Routes
+// PUBLIC ROUTE - Anyone can view equipment (for catalogue page)
 router.get('/all', getAllEquipment);
-router.post('/add', upload.single('image'), addEquipment);
-router.put('/update/:id', upload.single('image'), updateEquipment);
-router.delete('/delete/:id', deleteEquipment);
+
+// PROTECTED ROUTES - Only authenticated admins can modify
+router.post('/add', verifyToken, upload.single('image'), addEquipment);
+router.put('/update/:id', verifyToken, upload.single('image'), updateEquipment);
+router.delete('/delete/:id', verifyToken, deleteEquipment);
 
 module.exports = router;

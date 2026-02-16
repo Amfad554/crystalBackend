@@ -5,12 +5,19 @@ const jwt = require("jsonwebtoken");
 const { sendVerification } = require("../utils/emailVerification");
 const generateToken = require("../utils/generateToken");
 
+// NOTE: If you want to use Cloudinary for image storage, add this:
+// const cloudinary = require('cloudinary').v2;
+// cloudinary.config({
+//   cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+//   api_key: process.env.CLOUDINARY_API_KEY,
+//   api_secret: process.env.CLOUDINARY_API_SECRET
+// });
+
 // --- REGISTRATION ---
 exports.registerUser = async (req, res) => {
     const { name, email, password, confirmpassword } = req.body;
 
     try {
-        // 1. Basic Validation
         if (!name || !email || !password || !confirmpassword) {
             return res.status(400).json({ success: false, message: "Missing required fields!" });
         }
@@ -18,13 +25,11 @@ exports.registerUser = async (req, res) => {
             return res.status(400).json({ success: false, message: "Passwords do not match!" });
         }
 
-        // 2. Check if user exists
         const existingUser = await prisma.user.findUnique({ where: { email } });
         if (existingUser) {
             return res.status(400).json({ success: false, message: "Email already exists!" });
         }
 
-        // 3. Hash Password and Create User
         const hashedPassword = await bcrypt.hash(password, 12);
         const newUser = await prisma.user.create({
             data: {
@@ -36,7 +41,6 @@ exports.registerUser = async (req, res) => {
             }
         });
 
-        // 4. Generate Token and Send Email
         const token = jwt.sign({ email: newUser.email }, process.env.JWT_SECRET_KEY, { expiresIn: '15m' });
         const verificationLink = `${process.env.FRONTEND_URL}/verifyemail/${token}`;
 
@@ -44,8 +48,6 @@ exports.registerUser = async (req, res) => {
             await sendVerification(newUser.email, verificationLink);
             console.log(`✅ Verification email queued for ${newUser.email}`);
         } catch (mailError) {
-            // We still return 201 because the user WAS created, 
-            // but we alert the console that the email failed.
             console.error("❌ Mailer failed:", mailError.message);
         }
 
@@ -67,21 +69,14 @@ exports.loginUser = async (req, res) => {
     try {
         const user = await prisma.user.findUnique({ where: { email } });
 
-        // 1. Check Credentials
         if (!user || !(await bcrypt.compare(password, user.password))) {
             return res.status(400).json({ success: false, message: "Invalid email or password" });
         }
 
-        // 2. Handle Unverified Account
         if (!user.isVerified) {
             try {
-                // Generate a new temporary token
-                const jwt = require("jsonwebtoken");
-                const { sendVerification } = require("../utils/emailVerification");
-
                 const token = jwt.sign({ email: user.email }, process.env.JWT_SECRET_KEY, { expiresIn: '15m' });
                 const verificationLink = `${process.env.FRONTEND_URL}/verifyemail/${token}`;
-
                 await sendVerification(user.email, verificationLink);
 
                 return res.status(403).json({
@@ -96,18 +91,21 @@ exports.loginUser = async (req, res) => {
             }
         }
 
-        // 3. Successful Login
         const token = generateToken(user);
+        const loginTime = Date.now();
+        
         res.status(200).json({
             success: true,
             token,
+            loginTime,
             user: {
                 id: user.id,
                 name: user.name,
                 role: user.role,
                 email: user.email,
                 bio: user.bio || "",
-                phone: user.phone || ""
+                phone: user.phone || "",
+                profileImage: user.profileImage || null
             }
         });
     } catch (error) {
@@ -115,6 +113,7 @@ exports.loginUser = async (req, res) => {
         res.status(500).json({ success: false, message: "Server error during login" });
     }
 };
+
 // --- UPDATE PROFILE ---
 exports.updateProfile = async (req, res) => {
     const { id } = req.params;
@@ -127,6 +126,31 @@ exports.updateProfile = async (req, res) => {
             bio: bio ?? null,
             phone: phone ?? null
         };
+
+        // Handle profile image from memory storage (base64 or URL)
+        if (req.file) {
+            // OPTION 1: Store as base64 string (simple, no external service needed)
+            const base64Image = `data:${req.file.mimetype};base64,${req.file.buffer.toString('base64')}`;
+            updateData.profileImage = base64Image;
+
+            // OPTION 2: Upload to Cloudinary (uncomment if you want to use Cloudinary)
+            // try {
+            //     const uploadResult = await new Promise((resolve, reject) => {
+            //         const uploadStream = cloudinary.uploader.upload_stream(
+            //             { folder: 'profile_images', resource_type: 'auto' },
+            //             (error, result) => {
+            //                 if (error) reject(error);
+            //                 else resolve(result);
+            //             }
+            //         );
+            //         uploadStream.end(req.file.buffer);
+            //     });
+            //     updateData.profileImage = uploadResult.secure_url;
+            // } catch (uploadError) {
+            //     console.error("Cloudinary upload error:", uploadError);
+            //     return res.status(500).json({ success: false, message: "Image upload failed" });
+            // }
+        }
 
         if (password && password.trim() !== "") {
             const salt = await bcrypt.genSalt(12);
@@ -142,7 +166,8 @@ exports.updateProfile = async (req, res) => {
                 email: true,
                 role: true,
                 bio: true,
-                phone: true
+                phone: true,
+                profileImage: true
             }
         });
 
@@ -162,7 +187,6 @@ exports.updateProfile = async (req, res) => {
 
 // --- VERIFY EMAIL ---
 exports.verifyEmail = async (req, res) => {
-    // 1. Get token from body (POST) or params (GET)
     const token = req.body.token || req.params.token || req.query.token;
 
     if (!token) {
@@ -170,10 +194,8 @@ exports.verifyEmail = async (req, res) => {
     }
 
     try {
-        // 2. Verify Token
         const decoded = jwt.verify(token, process.env.JWT_SECRET_KEY);
 
-        // 3. Check if user exists and update
         const user = await prisma.user.findUnique({
             where: { email: decoded.email }
         });
@@ -213,8 +235,9 @@ exports.verifyEmail = async (req, res) => {
 exports.getAllUsers = async (req, res) => {
     try {
         const users = await prisma.user.findMany({
-            select: { id: true, name: true, email: true, role: true, isVerified: true }
+            select: { id: true, name: true, email: true, role: true, isVerified: true, profileImage: true }
         });
+        
         res.json({ success: true, users });
     } catch (error) {
         res.status(500).json({ success: false, message: "Error fetching users" });
@@ -243,15 +266,12 @@ exports.updateRole = async (req, res) => {
         return res.status(500).json({ success: false, message: error.message });
     }
 };
-// --- NEWSLETTER SUBSCRIPTION ---
-// --- ADDED: GET ALL NEWSLETTER SUBSCRIBERS ---
-// This matches your dashboard's fetch to: api/users/newsletter-all
+
+// --- GET ALL NEWSLETTER SUBSCRIBERS ---
 exports.getAllSubscribers = async (req, res) => {
     try {
         const subscribers = await prisma.newsletter.findMany({
-            orderBy: {
-                createdAt: 'desc' // Shows newest subscribers first
-            }
+            orderBy: { createdAt: 'desc' }
         });
 
         res.status(200).json({
@@ -267,7 +287,7 @@ exports.getAllSubscribers = async (req, res) => {
     }
 };
 
-// --- NEWSLETTER SUBSCRIPTION (EXISTING) ---
+// --- NEWSLETTER SUBSCRIPTION ---
 exports.subscribeNewsletter = async (req, res) => {
     const { email } = req.body;
 
@@ -304,7 +324,6 @@ exports.applyForJob = async (req, res) => {
     const { name, email, cvLink, roleTitle } = req.body;
 
     try {
-        // You can save this to a new Prisma model called 'Application'
         const application = await prisma.application.create({
             data: {
                 applicantName: name,
@@ -324,5 +343,7 @@ exports.getAllApplications = async (req, res) => {
     try {
         const apps = await prisma.application.findMany({ orderBy: { createdAt: 'desc' } });
         res.status(200).json({ success: true, data: apps });
-    } catch (e) { res.status(500).json({ success: false }); }
+    } catch (e) { 
+        res.status(500).json({ success: false }); 
+    }
 };

@@ -8,23 +8,24 @@ datasource db {
 }
 
 model User {
-  id         String    @id @default(cuid())
-  name       String?
-  email      String    @unique
-  password   String
-  role       Role      @default(CLIENT)
-  
+  id       String  @id @default(cuid())
+  name     String?
+  email    String  @unique
+  password String
+  role     Role    @default(CLIENT)
+
   // --- ADD THESE TWO LINES ---
-  bio        String?
-  phone      String?
+  bio   String?
+  phone String?
   // ---------------------------
 
-  image      String?
-  createdAt  DateTime  @default(now())
-  updatedAt  DateTime  @updatedAt
-  isVerified Boolean   @default(false)
-  inquiries  Inquiry[]
+  profileImage String?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+  isVerified   Boolean   @default(false)
+  inquiries    Inquiry[]
 }
+
 model Equipment {
   id             String   @id @default(cuid())
   name           String
