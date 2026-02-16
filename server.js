@@ -9,16 +9,23 @@ const aiRouter = require('./routers/adminRouter');
 
 const app = express();
 
-// --- MIDDLEWARES ---
-app.use(cors({
+// --- CORS CONFIGURATION ---
+const corsOptions = {
     origin: [
         "http://localhost:5173",
         "https://crystalices.site",
     ],
     methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-    allowedHeaders: ["Content-Type", "Authorization", "x-login-time"], // ✅ ADDED x-login-time
-    credentials: true
-}));
+    allowedHeaders: ["Content-Type", "Authorization", "x-login-time"],
+    exposedHeaders: ["Authorization"],
+    credentials: true,
+    optionsSuccessStatus: 200
+};
+
+app.use(cors(corsOptions));
+
+// Handle preflight requests explicitly
+app.options('*', cors(corsOptions));
 
 app.use(express.json());
 
@@ -30,8 +37,7 @@ app.get('/', (req, res) => {
 app.use('/api/users', userRouter);
 app.use('/api/inquiry', inquiryRouter);
 app.use('/api/admin', adminRouter);
-app.use('/api/equipment', adminRouter); // For the Catalogue
-app.use('/api/equipment', aiRouter); // For the Catalogue
+app.use('/api/equipment', adminRouter);
 
 // --- GLOBAL ERROR HANDLER ---
 app.use((err, req, res, next) => {
