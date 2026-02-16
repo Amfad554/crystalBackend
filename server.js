@@ -19,14 +19,11 @@ const corsOptions = {
     allowedHeaders: ["Content-Type", "Authorization", "x-login-time"],
     exposedHeaders: ["Authorization"],
     credentials: true,
-    optionsSuccessStatus: 200
+    preflightContinue: false,
+    optionsSuccessStatus: 204
 };
 
 app.use(cors(corsOptions));
-
-// Handle preflight requests explicitly
-app.options('*', cors(corsOptions));
-
 app.use(express.json());
 
 // --- ROUTES ---
