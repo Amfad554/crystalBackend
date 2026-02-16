@@ -16,7 +16,7 @@ app.use(cors({
         "https://crystalices.site",
     ],
     methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-    allowedHeaders: ["Content-Type", "Authorization"],
+    allowedHeaders: ["Content-Type", "Authorization", "x-login-time"], // ✅ ADDED x-login-time
     credentials: true
 }));
 
@@ -32,6 +32,7 @@ app.use('/api/inquiry', inquiryRouter);
 app.use('/api/admin', adminRouter);
 app.use('/api/equipment', adminRouter); // For the Catalogue
 app.use('/api/equipment', aiRouter); // For the Catalogue
+
 // --- GLOBAL ERROR HANDLER ---
 app.use((err, req, res, next) => {
     console.error("❌ GLOBAL ERROR:", err.stack);
