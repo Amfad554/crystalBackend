@@ -5,11 +5,11 @@ const cors = require('cors');
 const userRouter = require('./routers/userRouter');
 const inquiryRouter = require('./routers/InquiryRouter');
 const adminRouter = require('./routers/adminRouter');
-const aiRouter = require('./routers/adminRouter');
+// const aiRouter = require('./routers/aiRouter'); // uncomment when you have a real AI router
 
 const app = express();
 
-// --- CORS CONFIGURATION ---
+// --- CORS ---
 const corsOptions = {
     origin: [
         "http://localhost:5173",
@@ -31,10 +31,11 @@ app.get('/', (req, res) => {
     res.status(200).send("🚀 Crystal Backend is Live on Render!");
 });
 
-app.use('/api/users', userRouter);
-app.use('/api/inquiry', inquiryRouter);
-app.use('/api/admin', adminRouter);
-app.use('/api/equipment', adminRouter);
+app.use('/api/users', userRouter);       // register, login, profile, subscribers, applications
+app.use('/api/inquiry', inquiryRouter);  // submit, all, update-status, stats
+app.use('/api/admin', adminRouter);      // stats, equipment/*, staff/*
+
+// app.use('/api/ai', aiRouter);         // uncomment when ready
 
 // --- GLOBAL ERROR HANDLER ---
 app.use((err, req, res, next) => {
@@ -45,8 +46,7 @@ app.use((err, req, res, next) => {
     });
 });
 
-// Render dynamic port binding
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, "0.0.0.0", () => {
-    console.log(`🚀 Server is booming on port ${PORT}`);
+    console.log(`🚀 Server running on port ${PORT}`);
 });
