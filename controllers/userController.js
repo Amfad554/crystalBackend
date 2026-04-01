@@ -22,7 +22,7 @@ exports.registerUser = async (req, res) => {
             return res.status(400).json({ success: false, message: "Missing required fields!" });
         }
         if (password !== confirmpassword) {
-            return res.status(400).json({ success: false, message: "Passwords do not match!" });
+        return res.status(400).json({ success: false, message: "Passwords do not match!" });
         }
 
         const existingUser = await prisma.user.findUnique({ where: { email } });

@@ -2,28 +2,35 @@ const express = require("express");
 const router = express.Router();
 const adminController = require("../controllers/adminController");
 const multer = require("multer");
-const storage = multer.memoryStorage(); // Store file in memory to pass to Cloudinary
-const upload = multer({ storage }); // This defines the 'upload' variable you are using below
 
-const { 
-  getDashboardStats, 
-  getAllStaff, 
-  addStaff, 
+const storage = multer.memoryStorage();
+const upload = multer({ storage });
+
+const {
+  getDashboardStats,
+  getAllStaff,
+  addStaff,
+  updateStaff,
   deleteStaff,
   getAllEquipment,
   addEquipment,
-  deleteEquipment 
+  updateEquipment,
+  deleteEquipment,
 } = adminController;
 
-router.get("/stats", getDashboardStats); 
+// ── Stats ──────────────────────────────
+router.get("/stats", getDashboardStats);
 
-router.get("/staff/all", getAllStaff);
-// Now 'upload' is defined and will catch the image
-router.post("/staff/add", upload.single("image"), addStaff); 
-router.delete("/staff/delete/:id", deleteStaff);
-
+// ── Equipment ──────────────────────────
 router.get("/equipment/all", getAllEquipment);
 router.post("/equipment/add", upload.single("image"), addEquipment);
+router.put("/equipment/update/:id", upload.single("image"), updateEquipment); // ← was missing
 router.delete("/equipment/delete/:id", deleteEquipment);
+
+// ── Staff ──────────────────────────────
+router.get("/staff/all", getAllStaff);
+router.post("/staff/add", upload.single("image"), addStaff);
+router.put("/staff/update/:id", upload.single("image"), updateStaff);         // ← was missing
+router.delete("/staff/delete/:id", deleteStaff);
 
 module.exports = router;
